@@ -15,7 +15,7 @@
   'use strict';
   if (typeof window === 'undefined' || typeof document === 'undefined') return;
   if (window.__claudePromptNav) return;
-  const nav = (window.__claudePromptNav = { version: '0.5.5', stats: { collects: 0, renders: 0 } });
+  const nav = (window.__claudePromptNav = { version: '0.6.0', stats: { collects: 0, renders: 0 } });
 
   const SIDE = 'left'; // 'left' or 'right'
   const MAX_BARS = 40; // bars in the collapsed strip; the list always shows all
@@ -79,6 +79,7 @@
     count: null,
     preview: null,
     previewTimer: 0,
+    previewKey: '',
     scrim: null,
     swatch: null,
     palette: null,
@@ -190,6 +191,9 @@
   white-space:pre-wrap;overflow-wrap:anywhere;
   opacity:0;visibility:hidden;transform:translateX(calc(var(--pn-slide) * -.5));
   transition:opacity .14s var(--pn-ease),transform .14s var(--pn-ease),visibility 0s linear .14s}
+/* Search matches in the preview, tinted with the accent. */
+#claude-prompt-nav .pn-hit{background:color-mix(in srgb,var(--pn-accent) 40%,transparent);color:inherit;
+  border-radius:2px;box-shadow:0 0 0 1px color-mix(in srgb,var(--pn-accent) 70%,transparent)}
 #claude-prompt-nav .pn-preview.pn-shown{opacity:1;visibility:visible;transform:none;pointer-events:auto;
   transition:opacity .14s var(--pn-ease),transform .14s var(--pn-ease),visibility 0s}
 /* While the list is open the chat behind it is dimmed toward the editor
@@ -570,6 +574,7 @@
     search.addEventListener('input', () => {
       state.query = search.value;
       applyFilter();
+      if (state.open) updatePreview();
     });
 
     const list = el('div', 'pn-list');
@@ -639,6 +644,7 @@
       setPalette(false);
       clearTimeout(state.previewTimer);
       state.preview.classList.remove('pn-shown');
+      state.previewKey = ''; // reopened, the preview starts over at its first match
       state.search.blur();
       state.unpin = setTimeout(() => {
         state.root.style.top = '';
@@ -753,13 +759,40 @@
     const cut = text && text.scrollWidth > text.clientWidth + 1;
     const show = Boolean(state.open && entry && row && (entry.multiline || cut));
     if (show) {
-      if (state.preview.textContent !== entry.full) {
-        state.preview.textContent = entry.full;
-        state.preview.scrollTop = 0;
+      const needle = state.query.trim().toLowerCase();
+      const key = `${needle}\u0000${entry.full}`;
+      const fresh = key !== state.previewKey;
+      if (fresh) {
+        state.previewKey = key;
+        state.preview.replaceChildren(...highlight(entry.full, needle));
       }
       placePreview(row);
+      // A new prompt or search starts at the first match, a third of the way
+      // down, or at the top when nothing is marked.
+      if (fresh) {
+        const hit = state.preview.querySelector('.pn-hit');
+        state.preview.scrollTop = hit ? Math.max(0, hit.offsetTop - state.preview.clientHeight / 3) : 0;
+      }
     }
     state.preview.classList.toggle('pn-shown', show);
+  }
+
+  // The text as nodes, each case-insensitive match of the needle in a <mark>.
+  // Built from text nodes, so nothing in a prompt is ever read as markup.
+  function highlight(text, needle) {
+    const lower = text.toLowerCase();
+    // Lowercasing can change a string's length (İ, for one), which would
+    // shift every index below; such a prompt shows unmarked.
+    if (!needle || lower.length !== text.length) return [text];
+    const nodes = [];
+    let from = 0;
+    for (let at = lower.indexOf(needle); at !== -1; at = lower.indexOf(needle, at + needle.length)) {
+      if (at > from) nodes.push(text.slice(from, at));
+      nodes.push(el('mark', 'pn-hit', text.slice(at, at + needle.length)));
+      from = at + needle.length;
+    }
+    if (from < text.length) nodes.push(text.slice(from));
+    return nodes;
   }
 
   // Beside the list, level with the row, kept inside the window; below the

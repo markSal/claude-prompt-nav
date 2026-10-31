@@ -28,3 +28,4 @@
 - [x] Active row kept in view when the list opens (0.4.0)
 - [x] Published on GitHub with a VSIX release (0.5.4)
 - [x] Preview shows the whole prompt and scrolls (0.5.5)
+- [x] Search matches highlighted in the preview (0.6.0)

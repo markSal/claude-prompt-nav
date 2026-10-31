@@ -4,6 +4,11 @@ All notable changes to this project are documented here. The format follows [Kee
 
 ## [Unreleased]
 
+## [0.6.0] - 2026-10-31
+
+### Added
+- Search matches are highlighted in the preview, and the preview scrolls to the first one, so a prompt that matched past its first line shows why.
+
 ## [0.5.5] - 2026-10-31
 
 ### Changed
