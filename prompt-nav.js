@@ -15,11 +15,10 @@
   'use strict';
   if (typeof window === 'undefined' || typeof document === 'undefined') return;
   if (window.__claudePromptNav) return;
-  const nav = (window.__claudePromptNav = { version: '0.5.4', stats: { collects: 0, renders: 0 } });
+  const nav = (window.__claudePromptNav = { version: '0.5.5', stats: { collects: 0, renders: 0 } });
 
   const SIDE = 'left'; // 'left' or 'right'
   const MAX_BARS = 40; // bars in the collapsed strip; the list always shows all
-  const TEXT_LIMIT = 1200; // characters of a prompt shown in the preview
   const TOP_GAP = 8; // px left above a message after a jump
   const CLOSE_MS = 120; // the close transition, matched in the CSS below
 
@@ -180,16 +179,18 @@
 #claude-prompt-nav .pn-time{flex:0 0 auto;color:var(--pn-muted);font-size:.85em;line-height:16px;white-space:nowrap}
 /* The selected prompt's whole text, in a flyout beside the list (below it when
    there is no room). It floats over the chat and takes no space, so nothing
-   in the list ever moves when it shows or hides. */
+   in the list ever moves when it shows or hides. A long prompt scrolls inside
+   it, by wheel, scrollbar or Page Up/Down, without scrolling the chat. */
 #claude-prompt-nav .pn-preview{position:absolute;box-sizing:border-box;pointer-events:none;
+  max-height:min(50vh,var(--pn-max));overflow-y:auto;overscroll-behavior:contain;
   padding:6px 10px 7px;background:var(--app-menu-background,var(--vscode-menu-background,var(--vscode-editorWidget-background)));
   border:1px solid var(--pn-accent);border-radius:var(--corner-radius-medium,6px);
   box-shadow:0 6px 20px var(--vscode-widget-shadow,rgba(0,0,0,.45));
   color:var(--app-primary-foreground,var(--vscode-foreground));font-size:var(--pn-small);line-height:1.45;
-  white-space:pre-wrap;overflow-wrap:anywhere;overflow:hidden;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:12;
+  white-space:pre-wrap;overflow-wrap:anywhere;
   opacity:0;visibility:hidden;transform:translateX(calc(var(--pn-slide) * -.5));
   transition:opacity .14s var(--pn-ease),transform .14s var(--pn-ease),visibility 0s linear .14s}
-#claude-prompt-nav .pn-preview.pn-shown{opacity:1;visibility:visible;transform:none;
+#claude-prompt-nav .pn-preview.pn-shown{opacity:1;visibility:visible;transform:none;pointer-events:auto;
   transition:opacity .14s var(--pn-ease),transform .14s var(--pn-ease),visibility 0s}
 /* While the list is open the chat behind it is dimmed toward the editor
    background and softly blurred, so the list and the preview stand off it.
@@ -204,7 +205,6 @@
 @media (prefers-reduced-motion:reduce){
   #claude-prompt-nav .pn-strip,#claude-prompt-nav .pn-panel,#claude-prompt-nav .pn-bar,#claude-prompt-nav .pn-preview,
   #claude-prompt-nav-scrim{transition:none}}
-#claude-prompt-nav .pn-preview.pn-shown{pointer-events:none}
 `;
 
   // ---- DOM helpers -------------------------------------------------------
@@ -407,7 +407,6 @@
           turn: closestTurn(el, container),
           sticky: isSticky(el),
           full,
-          text: full.length > TEXT_LIMIT ? full.slice(0, TEXT_LIMIT - 1) + '…' : full,
           line: firstLine(full),
           multiline: full.includes('\n'),
           time: promptTime(el),
@@ -754,7 +753,10 @@
     const cut = text && text.scrollWidth > text.clientWidth + 1;
     const show = Boolean(state.open && entry && row && (entry.multiline || cut));
     if (show) {
-      state.preview.textContent = entry.text;
+      if (state.preview.textContent !== entry.full) {
+        state.preview.textContent = entry.full;
+        state.preview.scrollTop = 0;
+      }
       placePreview(row);
     }
     state.preview.classList.toggle('pn-shown', show);
@@ -903,6 +905,15 @@
           if (inSearch && state.search.selectionStart !== state.search.value.length) return;
           selectEdge(-1);
           break;
+        case 'PageDown':
+        case 'PageUp': {
+          // The list moves by arrow; the page keys scroll a long preview.
+          const preview = state.preview;
+          if (!preview.classList.contains('pn-shown')) return;
+          const step = (preview.clientHeight - 24) * (event.key === 'PageDown' ? 1 : -1);
+          preview.scrollBy({ top: step });
+          break;
+        }
         case 'Enter': {
           const row =
             state.list.querySelector('.pn-row.pn-selected:not([hidden])') || visibleRows()[0];

@@ -4,6 +4,11 @@ All notable changes to this project are documented here. The format follows [Kee
 
 ## [Unreleased]
 
+## [0.5.5] - 2026-10-31
+
+### Changed
+- The preview shows a prompt's whole text instead of its first 12 lines and 1,200 characters. A long prompt scrolls inside the preview, by mouse wheel, touchpad, scrollbar or Page Up/Down, without scrolling the chat; it starts at the top for each prompt.
+
 ## [0.5.4] - 2026-10-31
 
 ### Fixed
