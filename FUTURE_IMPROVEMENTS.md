@@ -27,3 +27,4 @@
 - [x] Performance audit: rate-limited collecting, runaway guard, no document-wide restyles (0.4.1, 0.5.1, 0.5.3)
 - [x] Active row kept in view when the list opens (0.4.0)
 - [x] Published on GitHub with a VSIX release (0.5.4)
+- [x] Preview shows the whole prompt and scrolls (0.5.5)
