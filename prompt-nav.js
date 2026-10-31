@@ -15,9 +15,10 @@
   'use strict';
   if (typeof window === 'undefined' || typeof document === 'undefined') return;
   if (window.__claudePromptNav) return;
-  const nav = (window.__claudePromptNav = { version: '0.6.0', stats: { collects: 0, renders: 0 } });
+  const nav = (window.__claudePromptNav = { version: '0.7.0', stats: { collects: 0, renders: 0 } });
 
   const SIDE = 'left'; // 'left' or 'right'
+  const OPEN_KEY = 'KeyP'; // Alt + this key (a KeyboardEvent.code) opens or closes the list
   const MAX_BARS = 40; // bars in the collapsed strip; the list always shows all
   const TOP_GAP = 8; // px left above a message after a jump
   const CLOSE_MS = 120; // the close transition, matched in the CSS below
@@ -68,6 +69,7 @@
     accent: '', // '' for the theme's colour, else a CSS colour or var()
     paletteOpen: false,
     unpin: 0,
+    returnFocus: null,
     mouseX: -1, // where the pointer last was over the list
     mouseY: -1,
     keyAt: 0, // when a key last moved the selection; the pointer yields for a moment
@@ -503,7 +505,7 @@
 
     const strip = el('div', 'pn-strip');
     strip.setAttribute('aria-hidden', 'true');
-    strip.title = 'Your prompts: click to open the list';
+    strip.title = 'Your prompts: click or press Alt+P to open the list';
     // The wheel over the strip scrolls the chat, as it would without the strip.
     strip.addEventListener(
       'wheel',
@@ -617,13 +619,17 @@
     applyAccent(loadAccent());
   }
 
-  // The list opens on a click on the strip and closes on a row's click, on
-  // Escape, or on a click anywhere else; hovering the strip opens nothing.
+  // The list opens on a click on the strip or Alt+P, and closes on a row's
+  // click, on Escape or Alt+P, or on a click anywhere else; hovering the
+  // strip opens nothing. Closing hands the focus back to where it was, so
+  // the chat's input keeps its caret.
   function setOpen(open) {
     if (!state.root || state.open === open) return;
     state.open = open;
     clearTimeout(state.unpin);
     if (open) {
+      const was = document.activeElement;
+      state.returnFocus = was && was !== document.body && !state.root.contains(was) ? was : null;
       // Pin the root where it is so the list grows downward only, and never
       // past the bottom of the window.
       const top = Math.max(8, state.root.getBoundingClientRect().top);
@@ -646,6 +652,9 @@
       state.preview.classList.remove('pn-shown');
       state.previewKey = ''; // reopened, the preview starts over at its first match
       state.search.blur();
+      const back = state.returnFocus;
+      state.returnFocus = null;
+      if (back && back.isConnected) back.focus({ preventScroll: true });
       state.unpin = setTimeout(() => {
         state.root.style.top = '';
         state.root.style.transform = '';
@@ -919,6 +928,15 @@
   }
 
   function onKey(event) {
+    // Alt+P toggles the list. The physical key, so a layout or the macOS
+    // Option key turning P into another character still counts.
+    if (event.altKey && !event.ctrlKey && !event.metaKey && !event.shiftKey && event.code === OPEN_KEY) {
+      if (!state.open && !state.entries.length) return;
+      event.preventDefault();
+      event.stopPropagation();
+      setOpen(!state.open);
+      return;
+    }
     if (state.open) {
       if (event.ctrlKey || event.metaKey) return;
       const inSearch = event.target === state.search;

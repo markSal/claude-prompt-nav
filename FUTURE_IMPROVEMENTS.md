@@ -7,7 +7,6 @@
 - Setting for the side (`left` / `right`) and for hiding the strip until the mouse nears the edge.
 - Show Claude's final answer under each prompt in the list (what #105693 asks for).
 - Flag turns that ended with a question to you.
-- Keyboard shortcut to open the list without the mouse.
 
 ## Patcher
 - Detect a renamed class prefix after a Claude Code update and show a one-line notice instead of silently drawing nothing.
@@ -29,3 +28,4 @@
 - [x] Published on GitHub with a VSIX release (0.5.4)
 - [x] Preview shows the whole prompt and scrolls (0.5.5)
 - [x] Search matches highlighted in the preview (0.6.0)
+- [x] Alt+P opens the list from the keyboard (0.7.0)

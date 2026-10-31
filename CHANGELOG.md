@@ -4,6 +4,14 @@ All notable changes to this project are documented here. The format follows [Kee
 
 ## [Unreleased]
 
+## [0.7.0] - 2026-10-31
+
+### Added
+- Alt+P opens and closes the list from the keyboard while the chat panel has focus.
+
+### Changed
+- Closing the list puts the focus back where it was, so the chat's input keeps its caret.
+
 ## [0.6.0] - 2026-10-31
 
 ### Added
