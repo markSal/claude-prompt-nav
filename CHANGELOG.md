@@ -4,6 +4,11 @@ All notable changes to this project are documented here. The format follows [Kee
 
 ## [Unreleased]
 
+## [0.8.0] - 2026-10-31
+
+### Added
+- A warning when a Claude Code update renames the chat class names the navigator finds prompts by, instead of the strip silently disappearing. The extension checks the install's stylesheet on start and after updates, and warns once per Claude Code version; `node patch.js` prints the same warning.
+
 ## [0.7.0] - 2026-10-31
 
 ### Added

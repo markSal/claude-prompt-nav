@@ -70,7 +70,7 @@ Coworkers who installed an earlier VSIX install the new one over it the same way
 
 ## Selectors the script relies on
 
-The chat's class names end in a per-build hash (`userMessageContainer_07S1Yg`), so the script matches prefixes: `messagesContainer_` (the scroll element), `turn_`, `userMessageContainer_`, `userMessage_`, `stickyHeader_`, `userMessageAttachments_`. Your own messages carry `aria-label="You"`. If a Claude Code update renames these, update the prefixes in `prompt-nav.js`.
+The chat's class names end in a per-build hash (`userMessageContainer_07S1Yg`), so the script matches prefixes: `messagesContainer_` (the scroll element), `turn_`, `userMessageContainer_`, `userMessage_`, `stickyHeader_`, `userMessageAttachments_`. Your own messages carry `aria-label="You"`. If a Claude Code update renames these, the extension shows a warning naming the missing ones (it checks Claude Code's `webview/index.css`); update the prefixes in `prompt-nav.js`. `patch.js` reads them from the `byPrefix(...)` calls there, so that is the only place to change.
 
 ## License
 

@@ -15,7 +15,7 @@
   'use strict';
   if (typeof window === 'undefined' || typeof document === 'undefined') return;
   if (window.__claudePromptNav) return;
-  const nav = (window.__claudePromptNav = { version: '0.7.0', stats: { collects: 0, renders: 0 } });
+  const nav = (window.__claudePromptNav = { version: '0.8.0', stats: { collects: 0, renders: 0 } });
 
   const SIDE = 'left'; // 'left' or 'right'
   const OPEN_KEY = 'KeyP'; // Alt + this key (a KeyboardEvent.code) opens or closes the list

@@ -9,6 +9,9 @@
  *   node patch.js --undo     remove the patch
  *   node patch.js --root DIR look in DIR instead of the usual extension folders
  *
+ * Each run also checks the install's stylesheet for the class names the
+ * script finds the chat by, and warns when an update has renamed any.
+ *
  * Also required by extension.js, which runs the same logic on VS Code start.
  */
 'use strict';
@@ -60,6 +63,27 @@ function targets(rootList) {
   return found;
 }
 
+// The class-name prefixes the script finds the chat by: every byPrefix('…')
+// in prompt-nav.js, so the list is kept in one place.
+function prefixesOf(scriptPath) {
+  const source = fs.readFileSync(scriptPath, 'utf8');
+  return [...new Set(Array.from(source.matchAll(/byPrefix\('([^']+)'\)/g), (m) => m[1]))];
+}
+
+// The prefixes an install's chat no longer uses. Its stylesheet carries every
+// class name the chat is drawn with (as ".userMessage_07S1Yg") and is never
+// patched, unlike index.js, which holds the script and its prefixes. null
+// when there is no stylesheet to read, so nothing is claimed either way.
+function missingOf(target, prefixes) {
+  let css;
+  try {
+    css = fs.readFileSync(path.join(path.dirname(target.file), 'index.css'), 'utf8');
+  } catch {
+    return null;
+  }
+  return prefixes.filter((prefix) => !new RegExp(`\\.${prefix}[A-Za-z0-9]`).test(css));
+}
+
 function payloadOf(scriptPath) {
   const source = fs.readFileSync(scriptPath, 'utf8');
   const hash = crypto.createHash('sha1').update(source).digest('hex').slice(0, 12);
@@ -84,16 +108,18 @@ function strip(text) {
 
 function apply({ scriptPath, rootList = roots(), dryRun = false }) {
   const { block, hash } = payloadOf(scriptPath);
+  const prefixes = prefixesOf(scriptPath);
   return targets(rootList).map((target) => {
+    const missing = missingOf(target, prefixes);
     const before = fs.readFileSync(target.file, 'utf8');
     const state = stateOf(before, hash);
-    if (state === 'current') return { ...target, state, action: 'kept' };
+    if (state === 'current') return { ...target, state, missing, action: 'kept' };
     if (!dryRun) {
       const backup = target.file + BACKUP_SUFFIX;
       if (state === 'unpatched' && !fs.existsSync(backup)) fs.copyFileSync(target.file, backup);
       fs.writeFileSync(target.file, strip(before) + block);
     }
-    return { ...target, state, action: state === 'stale' ? 'updated' : 'patched' };
+    return { ...target, state, missing, action: state === 'stale' ? 'updated' : 'patched' };
   });
 }
 
@@ -108,9 +134,11 @@ function remove({ rootList = roots(), dryRun = false } = {}) {
 
 function check({ scriptPath, rootList = roots() }) {
   const { hash } = payloadOf(scriptPath);
+  const prefixes = prefixesOf(scriptPath);
   return targets(rootList).map((target) => ({
     ...target,
     state: stateOf(fs.readFileSync(target.file, 'utf8'), hash),
+    missing: missingOf(target, prefixes),
     action: 'none',
   }));
 }
@@ -132,7 +160,12 @@ if (require.main === module) {
     console.log(`No Claude Code extension found under: ${rootList.join(', ') || '(no extension folders)'}`);
     process.exit(1);
   }
-  for (const r of results) console.log(`${r.action.padEnd(8)} ${r.state.padEnd(9)} ${r.file}`);
+  for (const r of results) {
+    console.log(`${r.action.padEnd(8)} ${r.state.padEnd(9)} ${r.file}`);
+    if (r.missing && r.missing.length) {
+      console.log(`  warning: this Claude Code no longer uses ${r.missing.join(', ')}; update the prefixes in prompt-nav.js`);
+    }
+  }
   if (results.some((r) => r.action === 'patched' || r.action === 'updated' || r.action === 'removed')) {
     console.log('\nReload VS Code windows (Developer: Reload Window) to pick this up.');
   }

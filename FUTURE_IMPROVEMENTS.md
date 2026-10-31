@@ -9,7 +9,6 @@
 - Flag turns that ended with a question to you.
 
 ## Patcher
-- Detect a renamed class prefix after a Claude Code update and show a one-line notice instead of silently drawing nothing.
 - Support the Claude Desktop app's Code tab if it keeps its webview bundle on disk the same way.
 
 ## Completed improvements
@@ -29,3 +28,4 @@
 - [x] Preview shows the whole prompt and scrolls (0.5.5)
 - [x] Search matches highlighted in the preview (0.6.0)
 - [x] Alt+P opens the list from the keyboard (0.7.0)
+- [x] Warning when a Claude Code update renames the chat's class names (0.8.0)
