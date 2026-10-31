@@ -2,7 +2,7 @@
   "name": "claude-prompt-nav",
   "displayName": "Claude Prompt Nav",
   "description": "A prompt navigator for the Claude Code chat panel: stacked lines at the edge of the chat, click to open the searchable list of your prompts and jump to one.",
-  "version": "0.8.0",
+  "version": "0.9.0",
   "publisher": "marksal",
   "license": "MIT",
   "engines": {

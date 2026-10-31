@@ -29,3 +29,4 @@
 - [x] Search matches highlighted in the preview (0.6.0)
 - [x] Alt+P opens the list from the keyboard (0.7.0)
 - [x] Warning when a Claude Code update renames the chat's class names (0.8.0)
+- [x] Copy button in the preview (0.9.0)

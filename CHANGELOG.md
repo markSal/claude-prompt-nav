@@ -4,6 +4,14 @@ All notable changes to this project are documented here. The format follows [Kee
 
 ## [Unreleased]
 
+## [0.9.0] - 2026-10-31
+
+### Added
+- A Copy button in the preview copies the whole prompt, for reusing it. A header above the text names the prompt (number and time) and holds the button, so it stays put while a long prompt scrolls.
+
+### Fixed
+- A long prompt's text ended in "Show more" (the chat's expand button), in the preview, in search and in what Copy copied. The chat's buttons are now left out of a prompt's words.
+
 ## [0.8.0] - 2026-10-31
 
 ### Added

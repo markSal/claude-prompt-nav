@@ -6,7 +6,7 @@ A strip of thin lines sits at the left edge of the chat, one per prompt you sent
 
 - **Click the strip** to open the list. The current position is marked.
 - **Type** to filter. **↑ / ↓** select, **Enter** jumps, **Home / End** go to the first / last match, **Esc** closes.
-- **Hover or select a row** to read the whole prompt in a flyout beside the list.
+- **Hover or select a row** to read the whole prompt in a flyout beside the list. Its **Copy** button copies the prompt.
 - **Alt+P** opens or closes the list from the keyboard while the chat panel has focus.
 - **Alt+↑ / Alt+↓** jump to the previous / next prompt without opening the list.
 - **The round swatch** in the list header sets the accent colour (theme default, presets, or custom). It's remembered.

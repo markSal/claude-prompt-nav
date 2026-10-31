@@ -15,7 +15,7 @@
   'use strict';
   if (typeof window === 'undefined' || typeof document === 'undefined') return;
   if (window.__claudePromptNav) return;
-  const nav = (window.__claudePromptNav = { version: '0.8.0', stats: { collects: 0, renders: 0 } });
+  const nav = (window.__claudePromptNav = { version: '0.9.0', stats: { collects: 0, renders: 0 } });
 
   const SIDE = 'left'; // 'left' or 'right'
   const OPEN_KEY = 'KeyP'; // Alt + this key (a KeyboardEvent.code) opens or closes the list
@@ -80,6 +80,10 @@
     list: null,
     count: null,
     preview: null,
+    previewBody: null,
+    previewInfo: null,
+    copyButton: null,
+    copiedTimer: 0,
     previewTimer: 0,
     previewKey: '',
     scrim: null,
@@ -182,17 +186,26 @@
 #claude-prompt-nav .pn-time{flex:0 0 auto;color:var(--pn-muted);font-size:.85em;line-height:16px;white-space:nowrap}
 /* The selected prompt's whole text, in a flyout beside the list (below it when
    there is no room). It floats over the chat and takes no space, so nothing
-   in the list ever moves when it shows or hides. A long prompt scrolls inside
-   it, by wheel, scrollbar or Page Up/Down, without scrolling the chat. */
+   in the list ever moves when it shows or hides. A header names the prompt
+   and holds its Copy button; below it a long prompt scrolls, by wheel,
+   scrollbar or Page Up/Down, without scrolling the chat. */
 #claude-prompt-nav .pn-preview{position:absolute;box-sizing:border-box;pointer-events:none;
-  max-height:min(50vh,var(--pn-max));overflow-y:auto;overscroll-behavior:contain;
-  padding:6px 10px 7px;background:var(--app-menu-background,var(--vscode-menu-background,var(--vscode-editorWidget-background)));
+  display:flex;flex-direction:column;max-height:min(50vh,var(--pn-max));overflow:hidden;
+  background:var(--app-menu-background,var(--vscode-menu-background,var(--vscode-editorWidget-background)));
   border:1px solid var(--pn-accent);border-radius:var(--corner-radius-medium,6px);
   box-shadow:0 6px 20px var(--vscode-widget-shadow,rgba(0,0,0,.45));
   color:var(--app-primary-foreground,var(--vscode-foreground));font-size:var(--pn-small);line-height:1.45;
-  white-space:pre-wrap;overflow-wrap:anywhere;
   opacity:0;visibility:hidden;transform:translateX(calc(var(--pn-slide) * -.5));
   transition:opacity .14s var(--pn-ease),transform .14s var(--pn-ease),visibility 0s linear .14s}
+#claude-prompt-nav .pn-preview-head{display:flex;align-items:center;justify-content:space-between;gap:8px;flex:0 0 auto;
+  padding:3px 4px 3px 10px;border-bottom:1px solid var(--pn-border);color:var(--pn-muted);font-size:.92em}
+#claude-prompt-nav .pn-copy{font:inherit;color:inherit;background:none;border:1px solid transparent;
+  border-radius:var(--corner-radius-small,4px);padding:1px 8px;cursor:pointer}
+#claude-prompt-nav .pn-copy:hover{color:var(--app-primary-foreground,var(--vscode-foreground));
+  background:var(--app-list-hover-background,var(--vscode-list-hoverBackground));border-color:var(--pn-border)}
+#claude-prompt-nav .pn-copy.pn-copied{color:var(--pn-accent)}
+#claude-prompt-nav .pn-preview-body{position:relative;flex:1 1 auto;min-height:0;overflow-y:auto;overscroll-behavior:contain;
+  padding:6px 10px 7px;white-space:pre-wrap;overflow-wrap:anywhere}
 /* Search matches in the preview, tinted with the accent. */
 #claude-prompt-nav .pn-hit{background:color-mix(in srgb,var(--pn-accent) 40%,transparent);color:inherit;
   border-radius:2px;box-shadow:0 0 0 1px color-mix(in srgb,var(--pn-accent) 70%,transparent)}
@@ -263,14 +276,17 @@
 
   // Attachment chips (image.png and the like) are not words the person typed.
   const ATTACHMENT = '[class*="ttachment"], img, picture, video';
-  const isAttachment = (node) => node.nodeType === 1 && node.matches(ATTACHMENT);
+  // Nor are the chat's own buttons: a long message carries "Show more" and
+  // "Show less", kept in the markup (visually hidden) even when unused.
+  const NOT_WORDS = `${ATTACHMENT}, button`;
 
-  // The words of a node without its attachment chips. innerText keeps a
-  // prompt's line breaks, so it is used wherever no chip has to be left out.
+  // The words of a node without its attachment chips and buttons. innerText
+  // keeps a prompt's line breaks, so it is used wherever nothing has to be
+  // left out.
   function wordsOf(node) {
     if (node.nodeType === 3) return node.data;
-    if (node.nodeType !== 1 || isAttachment(node)) return '';
-    if (!node.querySelector(ATTACHMENT)) return node.innerText || node.textContent || '';
+    if (node.nodeType !== 1 || node.matches(NOT_WORDS)) return '';
+    if (!node.querySelector(NOT_WORDS)) return node.innerText || node.textContent || '';
     return Array.from(node.childNodes).map(wordsOf).join('\n');
   }
 
@@ -594,7 +610,18 @@
     });
 
     const preview = el('div', 'pn-preview');
-    preview.setAttribute('aria-hidden', 'true');
+    const previewInfo = el('span', 'pn-preview-info');
+    const copyButton = el('button', 'pn-copy', 'Copy');
+    copyButton.type = 'button';
+    copyButton.tabIndex = -1; // like the rows: the search box keeps the focus
+    copyButton.title = 'Copy this prompt';
+    // Pressing it must not take the focus from the search box.
+    copyButton.addEventListener('mousedown', (event) => event.preventDefault());
+    const previewHead = el('div', 'pn-preview-head');
+    previewHead.append(previewInfo, copyButton);
+    const previewBody = el('div', 'pn-preview-body');
+    previewBody.setAttribute('aria-hidden', 'true');
+    preview.append(previewHead, previewBody);
 
     panel.append(head, search, list, preview, palette, colorInput, probe);
     root.append(strip, panel);
@@ -610,6 +637,9 @@
       list,
       count,
       preview,
+      previewBody,
+      previewInfo,
+      copyButton,
       scrim,
       swatch,
       palette,
@@ -773,14 +803,19 @@
       const fresh = key !== state.previewKey;
       if (fresh) {
         state.previewKey = key;
-        state.preview.replaceChildren(...highlight(entry.full, needle));
+        state.previewBody.replaceChildren(...highlight(entry.full, needle));
+        state.previewInfo.textContent = [`Prompt ${state.selected + 1}`, entry.time].filter(Boolean).join(' · ');
+        clearTimeout(state.copiedTimer);
+        state.copyButton.textContent = 'Copy';
+        state.copyButton.classList.remove('pn-copied');
       }
       placePreview(row);
       // A new prompt or search starts at the first match, a third of the way
       // down, or at the top when nothing is marked.
       if (fresh) {
-        const hit = state.preview.querySelector('.pn-hit');
-        state.preview.scrollTop = hit ? Math.max(0, hit.offsetTop - state.preview.clientHeight / 3) : 0;
+        const body = state.previewBody;
+        const hit = body.querySelector('.pn-hit');
+        body.scrollTop = hit ? Math.max(0, hit.offsetTop - body.clientHeight / 3) : 0;
       }
     }
     state.preview.classList.toggle('pn-shown', show);
@@ -828,6 +863,38 @@
       preview.style.width = `${pr.width}px`;
       preview.style.top = `${pr.height + gap}px`;
     }
+  }
+
+  // The clipboard API where the webview allows it, else the older copy
+  // command through a hidden text box. The button says which happened.
+  async function copyPrompt(text) {
+    let ok = false;
+    try {
+      await navigator.clipboard.writeText(text);
+      ok = true;
+    } catch {
+      const box = el('textarea');
+      box.value = text;
+      box.setAttribute('readonly', '');
+      box.style.cssText = 'position:fixed;opacity:0;pointer-events:none';
+      document.body.append(box);
+      box.select();
+      try {
+        ok = document.execCommand('copy');
+      } catch {
+        ok = false;
+      }
+      box.remove();
+      if (state.open) state.search.focus();
+    }
+    const button = state.copyButton;
+    button.textContent = ok ? 'Copied' : 'Copy failed';
+    button.classList.toggle('pn-copied', ok);
+    clearTimeout(state.copiedTimer);
+    state.copiedTimer = setTimeout(() => {
+      button.textContent = 'Copy';
+      button.classList.remove('pn-copied');
+    }, 1500);
   }
 
   // Scroll the list alone, never the chat behind it.
@@ -891,6 +958,12 @@
     if (event.target.closest('.pn-strip')) {
       event.preventDefault();
       setOpen(true);
+      return;
+    }
+    if (event.target.closest('.pn-copy')) {
+      event.preventDefault();
+      const entry = state.entries[state.selected];
+      if (entry) copyPrompt(entry.full);
       return;
     }
     if (event.target.closest('.pn-swatch')) {
@@ -959,10 +1032,10 @@
         case 'PageDown':
         case 'PageUp': {
           // The list moves by arrow; the page keys scroll a long preview.
-          const preview = state.preview;
-          if (!preview.classList.contains('pn-shown')) return;
-          const step = (preview.clientHeight - 24) * (event.key === 'PageDown' ? 1 : -1);
-          preview.scrollBy({ top: step });
+          if (!state.preview.classList.contains('pn-shown')) return;
+          const body = state.previewBody;
+          const step = (body.clientHeight - 24) * (event.key === 'PageDown' ? 1 : -1);
+          body.scrollBy({ top: step });
           break;
         }
         case 'Enter': {
