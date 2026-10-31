@@ -58,6 +58,15 @@ npm run apply        # node patch.js, for a local install without the extension
 
 Needs Node 18+. No dependencies.
 
+## Release a new version
+
+1. Bump `version` in `package.json` (and `nav.version` near the top of `prompt-nav.js`), and add a `CHANGELOG.md` entry.
+2. `npm run package` to build `claude-prompt-nav-<version>.vsix`.
+3. Commit, tag `v<version>`, push `main` and the tag.
+4. `gh release create v<version> claude-prompt-nav-<version>.vsix --title "Claude Prompt Nav <version>" --notes "..."`.
+
+Coworkers who installed an earlier VSIX install the new one over it the same way.
+
 ## Selectors the script relies on
 
 The chat's class names end in a per-build hash (`userMessageContainer_07S1Yg`), so the script matches prefixes: `messagesContainer_` (the scroll element), `turn_`, `userMessageContainer_`, `userMessage_`, `stickyHeader_`, `userMessageAttachments_`. Your own messages carry `aria-label="You"`. If a Claude Code update renames these, update the prefixes in `prompt-nav.js`.

@@ -7,13 +7,23 @@
 - Setting for the side (`left` / `right`) and for hiding the strip until the mouse nears the edge.
 - Show Claude's final answer under each prompt in the list (what #105693 asks for).
 - Flag turns that ended with a question to you.
-- Scroll the list so the active row stays in view in very long sessions.
+- Keyboard shortcut to open the list without the mouse.
 
 ## Patcher
 - Detect a renamed class prefix after a Claude Code update and show a one-line notice instead of silently drawing nothing.
 - Support the Claude Desktop app's Code tab if it keeps its webview bundle on disk the same way.
 
 ## Completed improvements
-- [x] Strip, list, hover text, click-to-jump, Alt+Up/Down (0.1.0)
+- [x] Strip, list, click-to-jump, Alt+Up/Down (0.1.0)
 - [x] Idempotent patcher with backup and `--undo` (0.1.0)
 - [x] Companion extension that re-applies after updates (0.1.0)
+- [x] Search, timestamps, click-to-open, only your own prompts listed (0.2.0)
+- [x] Keyboard selection: Up/Down, Enter, Home/End (0.3.0)
+- [x] Smooth open/close transition (0.3.1)
+- [x] Preview flyout, list grows downward only, one-click jumps (0.4.0–0.4.2)
+- [x] Dimmed, blurred chat behind the open list (0.4.3)
+- [x] Configurable accent colour with presets and custom picker (0.5.0–0.5.2)
+- [x] Image-only messages left out (0.5.0)
+- [x] Performance audit: rate-limited collecting, runaway guard, no document-wide restyles (0.4.1, 0.5.1, 0.5.3)
+- [x] Active row kept in view when the list opens (0.4.0)
+- [x] Published on GitHub with a VSIX release (0.5.4)
